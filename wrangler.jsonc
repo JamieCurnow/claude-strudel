@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // One Worker serves the Vue SPA (static assets) and the /api/* routes
+  // (Claude proxy + Deepgram voice proxy). The Cloudflare Vite plugin reads this
+  // file in `vp dev` (worker runs in workerd inside the Vite dev server) and at
+  // `vp build` it emits a deployable bundle. Pick the environment at build time
+  // with CLOUDFLARE_ENV=staging|production (see package.json build:* scripts).
+  "name": "claude-strudel",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "not_found_handling": "single-page-application",
+    // Only /api/* hits the worker; everything else is served straight from assets.
+    "run_worker_first": ["/api/*"]
+  },
+
+  "observability": { "logs": { "enabled": true, "invocation_logs": true } },
+
+  // Secrets (never in this file):
+  //   ANTHROPIC_API_KEY  - Claude API key
+  //   DEEPGRAM_API_KEY   - Deepgram key for voice (optional, typed input still works)
+  //   APP_PASSWORD       - optional shared password gate for /api/* on deployed envs
+  // Local dev reads them from .env. Deployed: `wrangler secret put X --env <env>`.
+
+  "env": {
+    "staging": {
+      "name": "claude-strudel-staging",
+      "workers_dev": true,
+      "preview_urls": false,
+      "observability": { "logs": { "enabled": true, "invocation_logs": true } }
+    },
+    "production": {
+      "name": "claude-strudel",
+      "workers_dev": true,
+      "preview_urls": false,
+      "observability": { "logs": { "enabled": true, "invocation_logs": true } }
+      // Add a custom domain when you have one:
+      // "routes": [{ "pattern": "strudel.example.com", "custom_domain": true }]
+    }
+  }
+}

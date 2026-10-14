@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+.output
+
+# Logs
+logs
+*.log
+
+# Local env / secrets (never commit)
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+
+# Wrangler local state + generated types
+.wrangler
+worker-configuration.d.ts
+
+# Vite+ task cache
+.vite
+node_modules/.vite
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+.claude/settings.local.json
