@@ -145,7 +145,7 @@ export const useDeck = defineStore('deck', () => {
       code: '',
       bpm: null,
       visuals: null,
-      requestCycle: clock.cycle,
+      requestCycle: engine.position(),
       errors: [],
       warnings: [],
       createdAt: Date.now(),

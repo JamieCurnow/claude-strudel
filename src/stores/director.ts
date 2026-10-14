@@ -7,7 +7,6 @@ import { applyBlockChanges, setMuted } from '@/engine/program'
 import { DirectorError, streamDirect, type StreamResult } from '@/director/client'
 import { parseQuickCommand, type QuickCommand } from '@/director/commands'
 import { buildDirectionMessage, buildRepairMessage } from '@/director/context'
-import { useClock } from './clock'
 import { useDeck, type Cue, type CueMetrics } from './deck'
 import { useSettings } from './settings'
 import { useVisuals } from './visuals'
@@ -30,7 +29,6 @@ const peek = (text: string) => {
 
 export const useDirector = defineStore('director', () => {
   const deck = useDeck()
-  const clock = useClock()
   const visuals = useVisuals()
   const { settings } = useSettings()
 
@@ -166,7 +164,7 @@ export const useDirector = defineStore('director', () => {
       content: buildDirectionMessage({
         direction: pending.direction,
         requestCycle: pending.requestCycle,
-        bpm: clock.bpm,
+        bpm: Math.round(engine.bpm),
         phraseBars: settings.phraseBars,
         launchMode: settings.launchMode,
         editMode: settings.editMode,
@@ -275,7 +273,7 @@ export const useDirector = defineStore('director', () => {
       ideas.slice(0, count).map(async (idea, slot) => {
         const controller = new AbortController()
         ideaControllers.push(controller)
-        const pending = { direction: idea.direction, requestCycle: clock.cycle }
+        const pending = { direction: idea.direction, requestCycle: engine.position() }
         const placeholder = deck.create({
           title: idea.title,
           summary: idea.direction,
@@ -291,7 +289,7 @@ export const useDirector = defineStore('director', () => {
           content: buildDirectionMessage({
             direction: idea.direction,
             requestCycle: pending.requestCycle,
-            bpm: clock.bpm,
+            bpm: Math.round(engine.bpm),
             phraseBars: settings.phraseBars,
             launchMode: settings.launchMode,
             editMode: settings.editMode,
@@ -386,7 +384,7 @@ export const useDirector = defineStore('director', () => {
     if (command) return runCommand(command)
     stopIdeas()
     error.value = ''
-    queue.value.push({ direction, requestCycle: opts.requestCycle ?? clock.cycle })
+    queue.value.push({ direction, requestCycle: opts.requestCycle ?? engine.position() })
     await pump()
   }
 

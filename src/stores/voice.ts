@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { engine } from '@/engine/engine'
 import { parseProgram } from '@/engine/program'
 import { openMic, SAMPLE_RATE, type Mic } from '@/voice/mic'
-import { useClock } from './clock'
 import { useDeck } from './deck'
 import { useDirector } from './director'
 import { useSettings } from './settings'
@@ -73,7 +73,6 @@ export const useVoice = defineStore('voice', () => {
   const heard = ref('')
   const error = ref('')
   const level = ref(0)
-  const clock = useClock()
   const deck = useDeck()
   const director = useDirector()
   const { settings } = useSettings()
@@ -132,7 +131,7 @@ export const useVoice = defineStore('voice', () => {
     if (status.value === 'listening' || status.value === 'connecting') return
     error.value = ''
     clearTimeout(idleClose)
-    pressCycle = clock.cycle
+    pressCycle = engine.position()
     finals = []
     interim.value = ''
     heard.value = ''

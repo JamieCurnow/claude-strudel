@@ -33,11 +33,20 @@ You're the director, Claude is the live coder, and Strudel is the band.
 
 ### Settings worth playing with
 
-- **Edit mode: Blocks vs Full.**
-  - **Blocks** (the default): Claude sends only the parts it changes, which is faster.
+- **Edit mode and model.** These set how fast a change arrives. Measured on a running set (warm cache):
+
+  | Setup               | Small change (e.g. "more snare reverb") |
+  | ------------------- | --------------------------------------- |
+  | Opus 5.5 · Blocks   | ~7.5s (~300 tokens)                     |
+  | Opus 5.5 · Full     | ~9-12s (~1,150 tokens)                  |
+  | Sonnet 5.5 · Blocks | ~5-6s                                   |
+  | Haiku 5.5 · Blocks  | ~2-3s                                   |
+
+  At 170 bpm a bar is 1.4s, so Haiku really does land "now" within a bar or two. Opus has the best taste, and a whole new track takes it ~15-18s.
+  - **Blocks** (the default): Claude sends only the parts it changes.
   - **Full**: Claude rewrites the whole program every time.
-  - The latency table in Settings compares them on your actual set. In testing, a small change in Blocks mode took ~6s and a whole new track took ~15-18s.
-- **Model and effort.** The default is Opus 5.5 at low effort. Sonnet 5.5 and Haiku 5.5 are there to trade quality for speed.
+  - The latency table in Settings tracks your own numbers.
+
 - **Fast mode** runs Opus about 2.5× quicker at 2× the price. It needs fast-mode quota on your Anthropic org, and falls back to normal speed automatically if you don't have it.
 - **Phrase length** (4/8/16 bars), what GO lands on, how many ideas to write ahead, and auto-repair.
 
