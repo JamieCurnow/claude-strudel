@@ -4,7 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss(), cloudflare()],
+  // The Cloudflare plugin owns the dev server; Vitest runs its own, so leave it out under test.
+  plugins: [vue(), tailwindcss(), ...(process.env.VITEST ? [] : [cloudflare()])],
   resolve: {
     alias: {
       '@': new URL('./src', import.meta.url).pathname,
@@ -28,6 +29,11 @@ export default defineConfig({
     options: { typeAware: true, typeCheck: true }
   },
   test: {
-    include: ['src/**/*.test.ts', 'shared/**/*.test.ts', 'worker/**/*.test.ts']
+    include: ['src/**/*.test.ts', 'shared/**/*.test.ts', 'worker/**/*.test.ts'],
+    // Strudel's deps only resolve correctly through their `module` field, so let Vite transform them.
+    server: { deps: { inline: [/@strudel\//, /@kabelsalat\//] } },
+    alias: {
+      '@kabelsalat/web': new URL('./node_modules/@kabelsalat/web/dist/index.mjs', import.meta.url).pathname
+    }
   }
 })

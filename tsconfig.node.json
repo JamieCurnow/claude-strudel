@@ -8,7 +8,16 @@
     "types": ["node"],
     "strict": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "#shared/*": ["./shared/*"]
+    }
   },
-  "include": ["vite.config.ts", "src/**/*.test.ts", "shared/**/*.test.ts", "worker/**/*.test.ts"]
+  "include": [
+    "vite.config.ts",
+    "src/types/**/*.d.ts",
+    "src/**/*.test.ts",
+    "shared/**/*.test.ts",
+    "worker/**/*.test.ts"
+  ]
 }
