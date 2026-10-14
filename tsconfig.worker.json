@@ -5,13 +5,15 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["@cloudflare/workers-types"],
+    "types": ["@cloudflare/workers-types", "vite/client"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "paths": { "#shared/*": ["./shared/*"] }
+    "paths": {
+      "#shared/*": ["./shared/*"]
+    }
   },
   "include": ["worker/**/*.ts", "shared/**/*.ts"],
   "exclude": ["**/*.test.ts"]
