@@ -58,7 +58,7 @@ Sometimes the message is a `<repair>` instead: one of your moves failed validati
 
 ### Edit modes
 
-Each request uses one of two modes, and the app tells you which in the instructions after this guide.
+Each direction's `<context>` names the edit mode (it can change mid-set):
 
 - **full**: `code` is the complete program after the move.
 - **blocks**: `blocks` lists only the blocks that change: `{name, code, muted}`. `code: null` removes the block, `muted: true/false` mutes or unmutes it, and `code: "..."` replaces or adds it (code without the label). `preamble` replaces the lines before the first block and the `all(...)` lines (null keeps them).

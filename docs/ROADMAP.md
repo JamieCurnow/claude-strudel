@@ -48,44 +48,51 @@ Claude Strudel lets you direct a live set in plain English, by voice or by typin
 - [x] CI: `vp check`, `vue-tsc`, `vp test`, `vp build`, `wrangler deploy --dry-run` on every PR
 - [x] Staging deploy on push to main, manual production deploy with a `releases/production` branch (gated on `DEPLOY_ENABLED`)
 
-### M1 - Engine
+### M1: Engine ✅
 
-- [ ] Strudel boot: prebake the strudel.cc sound banks + dirt-samples breaks
-- [ ] Musical clock: bar, beat and phrase from the scheduler, BPM managed outside the code (`setcpm` stripped and applied on the bar)
-- [ ] Timeline composer: segments `[{ fromCycle, pattern }]` composed into one pattern, so changes land exactly on their bar, with old segments pruned
-- [ ] Dry-run validator (compile, query, unknown sounds, event budget)
-- [ ] Code view with live highlighting of active events
+- [x] Strudel boot: the strudel.cc sound banks plus dirt-samples breaks and Switch Angel breaks
+- [x] Musical clock (bar, beat, phrase). BPM is managed outside the code: `setcpm` is stripped and the tempo is applied on the bar
+- [x] Timeline composer: changes land exactly on their bar, and old segments are pruned
+- [x] Dry-run validator (compile, query, unknown sounds, event budget) plus sample preloading
+- [x] Code view with live highlighting of active events
 
-### M2 - Director (Claude)
+### M2: Director (Claude) ✅
 
-- [ ] Worker `/api/direct`: streams Claude with the cached system prompt, a structured-output schema per edit mode, refusal fallbacks, effort/model/fast-mode settings, and compaction
-- [ ] System prompt: house conventions (labelled blocks, `_` to mute, master `all()`), sound list, jungle/dnb/techno/house/ambient style packs, a helper library for builds (ramps, risers, rolls), and a generated function reference from `@strudel/reference`
-- [ ] Conversation store (append-only, saved locally) and move parsing from partial JSON while streaming (the code types out on stage)
-- [ ] Full / Blocks edit modes plus latency and accuracy stats
-- [ ] Automatic repair loop using the exact validation error
+- [x] Worker `/api/direct`: streaming, a structured-output schema per edit mode, 1h caching, refusal fallbacks, model/effort/fast-mode settings, `drop_block` thinking binding
+- [x] System prompt: guide, 7 tested style packs, helper library, generated sound list and function reference
+- [x] Append-only conversation saved locally, with code streaming into the cue card
+- [x] Full / Blocks edit modes, plus a latency stats table
+- [x] Automatic repair turn with the exact validation errors (code path in place, but not yet seen firing live)
 
-### M3 - Deck & timing
+### M3: Deck & timing ✅
 
-- [ ] Move lifecycle: generating → ready / queued → playing → history (or failed / late)
-- [ ] `when` resolved against the bar you spoke on; Auto / Arm launch modes; GO, cancel and jump-back
-- [ ] Phrase length setting (4/8/16), bar and phrase ring on the transport
-- [ ] Hotkeys: Space (talk), Enter (send), G (go), Esc (cancel queued), 1-9 (launch idea), Cmd-Z (undo)
+- [x] Cue lifecycle, Auto / Arm modes, GO, hold, play again, undo
+- [x] `when` resolved against the bar you spoke on; late cues slide to the next bar and are flagged to Claude
+- [x] Phrase length setting and a phrase ring on the transport
+- [x] Hotkeys: Space, Enter, G, Esc, 1-3, Cmd-Z, S
 
-### M4 - Voice
+### M4: Voice ✅
 
-- [ ] Worker WebSocket proxy to Deepgram (`/api/voice`)
-- [ ] Hold-to-talk capture (AudioWorklet → 16 kHz linear16), interim transcript, key terms
-- [ ] Quick commands that skip Claude
+- [x] Worker WebSocket proxy to Deepgram
+- [x] Hold-to-talk capture at 16 kHz, interim transcript, key terms from the current block names
+- [x] Quick commands that skip Claude
 
-### M5 - Visuals
+### M5: Visuals ✅
 
-- [ ] Stage layer: background, accent, overlay text, Strudel visualisers
-- [ ] Hydra sketches written by Claude, validated, and landed on the bar
-- [ ] Stage mode (hide the chrome for a projector)
+- [x] Background, accent, overlay text, scope / spectrum / pianoroll / punchcard / spiral
+- [x] Hydra sketches written by Claude, landed on the bar
+- [x] Stage view
 
-### M6 - Ideas (pre-generation)
+### M6: Ideas ✅
 
-- [ ] Ideas from every response, background forks (count toggle 0-3), ghost cards, instant launch, new instruction overrides
+- [x] Ideas from every reply, background forks (0-3), greyed cues with stable hotkeys, instant launch, a new direction replaces them
+
+### Next up
+
+- Try a real set and tune: the prompt (taste, levels), the default edit mode, how many ideas to write ahead
+- Auto-repair: watch it in the wild and add an eval set of directions (did the hats actually get busier? did the key change?)
+- Undo for "cancel" when it's spoken while Claude is writing (it currently aborts the request)
+- Mobile / tablet layout for a second screen (the director's remote)
 
 ### Later
 
