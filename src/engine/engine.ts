@@ -111,6 +111,14 @@ export class Engine {
     return this.repl?.scheduler.now() ?? 0
   }
 
+  /**
+   * Where the playhead is right now, for timing directions. Reads the scheduler directly rather than the
+   * reactive clock (which is sampled by requestAnimationFrame and stalls when the tab is in the background).
+   */
+  position() {
+    return this.started ? this.now() : 0
+  }
+
   get started() {
     return !!this.repl?.scheduler.started
   }

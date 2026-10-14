@@ -62,7 +62,7 @@ Claude Strudel lets you direct a live set in plain English, by voice or by typin
 - [x] System prompt: guide, 7 tested style packs, helper library, generated sound list and function reference
 - [x] Append-only conversation saved locally, with code streaming into the cue card
 - [x] Full / Blocks edit modes, plus a latency stats table
-- [x] Automatic repair turn with the exact validation errors (code path in place, but not yet seen firing live)
+- [x] Automatic repair turn with the exact validation errors (verified with a simulated failure)
 
 ### M3: Deck & timing ✅
 
@@ -90,7 +90,7 @@ Claude Strudel lets you direct a live set in plain English, by voice or by typin
 ### Next up
 
 - Try a real set and tune: the prompt (taste, levels), the default edit mode, how many ideas to write ahead
-- Auto-repair: watch it in the wild and add an eval set of directions (did the hats actually get busier? did the key change?)
+- An eval set of directions (did the hats actually get busier? did the key change?) to tune prompts and pick a default model
 - Undo for "cancel" when it's spoken while Claude is writing (it currently aborts the request)
 - Mobile / tablet layout for a second screen (the director's remote)
 
