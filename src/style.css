@@ -1,0 +1,104 @@
+@import 'tailwindcss';
+
+/*
+  Claude Strudel - a cue stack for a live set.
+  Colour comes from theatre lighting gels: each cue state has the colour a stage manager would read it by.
+    standby (queued, landing on a bar) = bastard amber
+    live (on air)                      = primary red
+    armed (waiting for GO)             = congo blue
+    ideas (not called yet)             = steel
+  The stage behind everything belongs to Claude's visuals, so chrome sits on translucent dark glass.
+*/
+@theme {
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Martian Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-ink: #f3eee6;
+  --color-ink-dim: #b3acbd;
+  --color-ink-faint: #6f6a7a;
+  --color-glass: rgb(14 11 20 / 0.72);
+  --color-glass-strong: rgb(14 11 20 / 0.9);
+  --color-line: rgb(243 238 230 / 0.1);
+
+  --color-amber: #f7b267;
+  --color-live: #ff3b4e;
+  --color-armed: #7c82ff;
+  --color-steel: #93a0b8;
+  --color-fail: #ff6aa2;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #07060b;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-stretch: 100%;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.expanded {
+  font-stretch: 125%;
+}
+
+.condensed {
+  font-stretch: 75%;
+}
+
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+}
+
+/* Active mini-notation tokens in the code view light up as they play. */
+.tok {
+  border-radius: 3px;
+  transition:
+    background-color 90ms linear,
+    color 90ms linear;
+}
+.tok.on {
+  /* Works on any accent Claude picks: tinted fill + outline, text stays light. */
+  background: color-mix(in srgb, var(--stage-accent, var(--color-amber)) 55%, transparent);
+  box-shadow: 0 0 0 1px var(--stage-accent, var(--color-amber));
+  color: #fff;
+}
+
+/* Lines that just changed when a cue lands: one bright pass, then settle. */
+@keyframes landed-line {
+  from {
+    background: color-mix(in srgb, var(--stage-accent, var(--color-amber)) 45%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+.line-fresh {
+  animation: landed-line 2.4s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line-fresh {
+    animation: none;
+  }
+  .tok {
+    transition: none;
+  }
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(243 238 230 / 0.15) transparent;
+}

@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta/messages/messages'
 import { directorSchema, EFFORTS, isModelId, MODELS, type DirectRequest } from '#shared/director'
-import { modeInstructions, SYSTEM_PROMPT } from './prompt/system'
+import { SYSTEM_PROMPT } from './prompt/system'
 
 const MAX_MESSAGES = 2000
 
@@ -36,14 +36,19 @@ export const handleDirect = async (request: Request, env: Env) => {
       {
         model,
         max_tokens: 32000,
-        betas: ['server-side-fallback-2026-07-01', ...(fastMode ? ['fast-mode-2026-02-01'] : [])],
+        betas: [
+          'server-side-fallback-2026-07-01',
+          'thinking-binding-controls-2026-08-01',
+          ...(fastMode ? ['fast-mode-2026-02-01'] : [])
+        ],
         // Refusals are re-run on Anthropic's recommended fallback model server-side.
         fallbacks: 'default',
         ...(fastMode ? { speed: 'fast' as const } : {}),
-        system: [
-          { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral', ttl: '1h' } },
-          { type: 'text', text: modeInstructions(mode) }
-        ],
+        // Frozen for the whole set: anything per-request goes in the user turn (see EDIT_MODE_LINE).
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral', ttl: '1h' } }],
+        // Thinking blocks are bound to the exact prefix that produced them. If that prefix changed (a deploy
+        // changed the prompt, a model switch), drop the stale reasoning instead of failing the request.
+        thinking: { type: 'adaptive', block_binding: { prefix_mismatch_behavior: 'drop_block' } },
         // Caches the whole conversation prefix too (the conversation is append-only).
         cache_control: { type: 'ephemeral', ttl: '1h' },
         messages: messages as BetaMessageParam[],

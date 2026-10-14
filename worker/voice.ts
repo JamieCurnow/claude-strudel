@@ -38,12 +38,13 @@ export const handleVoice = async (request: Request, env: Env) => {
   const [client, server] = [pair[0], pair[1]]
   server.accept()
 
+  // Binary frames can arrive as a Blob (local dev runtime); convert, keeping frame order.
+  let forward = Promise.resolve()
   server.addEventListener('message', (event) => {
-    try {
-      upstream.send(event.data)
-    } catch {
-      server.close(1011, 'upstream closed')
-    }
+    const data = event.data as string | ArrayBuffer | Blob
+    forward = forward
+      .then(async () => upstream.send(data instanceof Blob ? await data.arrayBuffer() : data))
+      .catch(() => server.close(1011, 'upstream closed'))
   })
   upstream.addEventListener('message', (event) => {
     try {

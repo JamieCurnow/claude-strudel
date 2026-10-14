@@ -14,6 +14,16 @@ export type Effort = (typeof EFFORTS)[number]
 /** full: Claude returns the whole program every time. blocks: Claude returns only the blocks it changes. */
 export type EditMode = 'full' | 'blocks'
 
+/**
+ * Stated in every direction's <context> rather than the system prompt: the system prompt must never change
+ * mid-set, or earlier thinking blocks stop validating (they're bound to the exact conversation prefix).
+ */
+export const EDIT_MODE_LINE: Record<EditMode, string> = {
+  full: 'edit mode full: every move includes `code`, the complete program after the move (unchanged blocks copied exactly)',
+  blocks:
+    'edit mode blocks: every move includes `blocks` (only the blocks that change) and `preamble` (null unless it changes); for a brand new track send every new block plus `code: null` for each old block that should go'
+}
+
 export const WHEN_TYPES = ['next_bar', 'next_phrase', 'in_bars', 'manual'] as const
 export type WhenType = (typeof WHEN_TYPES)[number]
 
