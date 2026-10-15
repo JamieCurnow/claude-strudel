@@ -69,6 +69,8 @@ export interface Cue {
   replyId?: string
   /** Ideas: position in Claude's suggestion list (keeps hotkeys 1-3 stable while ideas finish writing). */
   slot?: number
+  /** Set while this cue is going back on as an undo: the cue it replaces, dropped from the stack when this lands. */
+  undoes?: string
   createdAt: number
 }
 
@@ -195,6 +197,14 @@ export const useDeck = defineStore('deck', () => {
     if (!cue.number) cue.number = nextNumber++
   }
 
+  /** Off the timeline: back to armed, or back into history if it was an undo. */
+  const unqueue = (cue: Cue) =>
+    Object.assign(cue, {
+      status: cue.undoes ? 'played' : 'ready',
+      targetCycle: undefined,
+      undoes: undefined
+    })
+
   /**
    * Put a cue on the timeline. `when` defaults to the cue's own `when` (auto launch); `target` is a bar
    * already planned for it (a reply's moves are planned together, see planReply).
@@ -224,10 +234,7 @@ export const useDeck = defineStore('deck', () => {
     const { pattern, bpm: codeBpm } = await ensureCompiled(cue)
     // Anything else already queued for the same bar is replaced by this cue.
     for (const other of queued.value) {
-      if (other.id !== cue.id && other.targetCycle === target.target) {
-        other.status = 'ready'
-        other.targetCycle = undefined
-      }
+      if (other.id !== cue.id && other.targetCycle === target.target) unqueue(other)
     }
     number(cue)
     const moveStart = cue.inheritStart ?? target.target
@@ -281,10 +288,22 @@ export const useDeck = defineStore('deck', () => {
     await launch(cue.id, { quantize: settings.goQuantize })
   }
 
-  /** Undo = recall the cue that was playing before the current one. */
+  /**
+   * Back a step: the cue before the live one goes back on (the same cue, not a copy) on the next bar, and the
+   * live one is dropped from the stack when it lands. Undoing again before that steps back one more.
+   */
   const undo = async () => {
-    const previous = history.value.at(-1)
-    if (previous) await recall(previous.id)
+    const pending = queued.value.find((cue) => cue.undoes)
+    const current = pending ? find(pending.undoes!) : live.value
+    if (pending) {
+      await engine.cancel(pending.id)
+      unqueue(pending)
+    }
+    const previous = history.value.filter((cue) => cue !== pending).at(-1)
+    if (!previous) return
+    Object.assign(previous, { undoes: current?.id, inheritStart: undefined })
+    if (current) report(`director undid #${current.number} "${current.title}", back to #${previous.number}`)
+    await launch(previous.id, { quantize: 'next_bar' })
   }
 
   /** Take a queued cue off the timeline (it goes back to armed). */
@@ -292,7 +311,7 @@ export const useDeck = defineStore('deck', () => {
     const cue = find(id)
     if (!cue || cue.status !== 'queued') return
     await engine.cancel(id)
-    Object.assign(cue, { status: 'ready', targetCycle: undefined })
+    unqueue(cue)
     report(`director cancelled #${cue.number} "${cue.title}"`)
   }
 
@@ -326,7 +345,7 @@ export const useDeck = defineStore('deck', () => {
     if (event.type === 'stopped') {
       for (const cue of queued.value) {
         void engine.cancel(cue.id)
-        Object.assign(cue, { status: 'ready', targetCycle: undefined })
+        unqueue(cue)
       }
       for (const cue of cues.value) cue.inheritStart = undefined
       return
@@ -336,7 +355,9 @@ export const useDeck = defineStore('deck', () => {
     if (!cue) return
     for (const other of cues.value)
       if (other.status === 'live' && other.id !== cue.id) other.status = 'played'
-    Object.assign(cue, { status: 'live', landedCycle: event.cycle })
+    const undone = cue.undoes ? find(cue.undoes) : undefined
+    if (undone?.status === 'played') undone.status = 'discarded'
+    Object.assign(cue, { status: 'live', landedCycle: event.cycle, undoes: undefined })
     if (cue.visuals) visuals.apply(cue.visuals)
     report(`#${cue.number} "${cue.title}" landed on bar ${Math.max(0, Math.round(event.cycle))}`)
   })

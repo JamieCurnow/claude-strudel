@@ -2,6 +2,7 @@
 import { EFFORTS, MODELS } from '#shared/director'
 import { useDirector } from '@/stores/director'
 import { useSettings } from '@/stores/settings'
+import Segmented from './Segmented.vue'
 import StatsPanel from './StatsPanel.vue'
 
 const emit = defineEmits<{ close: [] }>()
@@ -34,95 +35,67 @@ const newSet = () => {
 
       <fieldset class="space-y-2">
         <legend class="font-semibold mb-1">Model</legend>
-        <div class="flex flex-wrap gap-2">
-          <label
-            v-for="m in MODELS"
-            :key="m.id"
-            class="cursor-pointer rounded-md border px-3 py-1.5 text-sm"
-            :class="
-              settings.model === m.id ? 'border-amber text-ink bg-amber/10' : 'border-line text-ink-dim'
-            "
-          >
-            <input v-model="settings.model" class="sr-only" type="radio" :value="m.id" />{{ m.label }}
-          </label>
-        </div>
-        <div class="flex flex-wrap gap-2 items-center">
-          <span class="text-sm text-ink-dim w-16">Effort</span>
-          <label
-            v-for="e in EFFORTS"
-            :key="e"
-            class="cursor-pointer rounded-md border px-3 py-1 text-sm"
-            :class="settings.effort === e ? 'border-amber text-ink bg-amber/10' : 'border-line text-ink-dim'"
-          >
-            <input v-model="settings.effort" class="sr-only" type="radio" :value="e" />{{ e }}
-          </label>
-        </div>
-        <label class="flex items-center gap-2 text-sm text-ink-dim">
-          <input v-model="settings.fast" type="checkbox" :disabled="settings.model !== 'claude-opus-5-5'" />
-          Fast <span class="text-ink-faint">Opus · 2× cost</span>
+        <Segmented v-model="settings.model" :options="MODELS.map((m) => ({ value: m.id, label: m.label }))" />
+        <Segmented
+          v-model="settings.effort"
+          label="Effort"
+          :options="EFFORTS.map((e) => ({ value: e, label: e }))"
+        />
+        <label class="flex items-center gap-3 text-sm text-ink-dim pt-1">
+          <input
+            v-model="settings.fast"
+            class="switch"
+            type="checkbox"
+            :disabled="settings.model !== 'claude-opus-5-5'"
+          />
+          <span>Fast <span class="text-ink-faint">Opus · 2× cost</span></span>
         </label>
       </fieldset>
 
       <fieldset class="space-y-2">
         <legend class="font-semibold mb-1">Edits</legend>
-        <label class="flex gap-2 text-sm cursor-pointer">
-          <input v-model="settings.editMode" type="radio" value="blocks" />
-          <span
-            ><span class="text-ink mr-1.5">Blocks</span
-            ><span class="text-ink-faint">changed blocks only</span></span
-          >
-        </label>
-        <label class="flex gap-2 text-sm cursor-pointer">
-          <input v-model="settings.editMode" type="radio" value="full" />
-          <span
-            ><span class="text-ink mr-1.5">Full</span><span class="text-ink-faint">whole program</span></span
-          >
-        </label>
+        <Segmented
+          v-model="settings.editMode"
+          :options="[
+            { value: 'blocks', label: 'Blocks', hint: 'changed only' },
+            { value: 'full', label: 'Full', hint: 'whole program' }
+          ]"
+        />
       </fieldset>
 
       <fieldset class="space-y-2">
         <legend class="font-semibold mb-1">Launch</legend>
-        <label class="flex gap-2 text-sm cursor-pointer">
-          <input v-model="settings.launchMode" type="radio" value="auto" />
-          <span><span class="text-ink mr-1.5">Auto</span><span class="text-ink-faint">on cue</span></span>
-        </label>
-        <label class="flex gap-2 text-sm cursor-pointer">
-          <input v-model="settings.launchMode" type="radio" value="arm" />
-          <span><span class="text-ink mr-1.5">Arm</span><span class="text-ink-faint">wait for GO</span></span>
-        </label>
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-ink-dim w-28">GO lands</span>
-          <select v-model="settings.goQuantize" class="bg-black/50 border border-line rounded px-2 py-1">
-            <option value="next_bar">next bar</option>
-            <option value="next_phrase">next phrase</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-ink-dim w-28">Phrase</span>
-          <select
-            v-model.number="settings.phraseBars"
-            class="bg-black/50 border border-line rounded px-2 py-1"
-          >
-            <option :value="4">4 bars</option>
-            <option :value="8">8 bars</option>
-            <option :value="16">16 bars</option>
-          </select>
-        </div>
+        <Segmented
+          v-model="settings.launchMode"
+          :options="[
+            { value: 'auto', label: 'Auto', hint: 'on cue' },
+            { value: 'arm', label: 'Arm', hint: 'wait for GO' }
+          ]"
+        />
+        <Segmented
+          v-model="settings.goQuantize"
+          label="GO lands"
+          :options="[
+            { value: 'next_bar', label: 'next bar' },
+            { value: 'next_phrase', label: 'next phrase' }
+          ]"
+        />
+        <Segmented
+          v-model="settings.phraseBars"
+          label="Phrase"
+          :options="[4, 8, 16].map((bars) => ({ value: bars, label: `${bars} bars` }))"
+        />
       </fieldset>
 
       <fieldset class="space-y-2">
         <legend class="font-semibold mb-1">Ideas</legend>
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-ink-dim">Write ahead</span>
-          <select v-model.number="settings.ideas" class="bg-black/50 border border-line rounded px-2 py-1">
-            <option :value="0">off</option>
-            <option :value="1">1 idea</option>
-            <option :value="2">2 ideas</option>
-            <option :value="3">3 ideas</option>
-          </select>
-        </div>
-        <label class="flex items-center gap-2 text-sm text-ink-dim">
-          <input v-model="settings.autoRepair" type="checkbox" /> Auto-fix failed code
+        <Segmented
+          v-model="settings.ideas"
+          label="Write ahead"
+          :options="[0, 1, 2, 3].map((n) => ({ value: n, label: n ? String(n) : 'off' }))"
+        />
+        <label class="flex items-center gap-3 text-sm text-ink-dim pt-1">
+          <input v-model="settings.autoRepair" class="switch" type="checkbox" /> Auto-fix failed code
         </label>
       </fieldset>
 
