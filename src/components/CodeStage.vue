@@ -22,7 +22,10 @@ interface Piece {
 }
 interface Line {
   pieces: Piece[]
+  indent: number
   fresh: boolean
+  /** Inside a muted block (`_hats:`). */
+  muted: boolean
 }
 const lines = ref<Line[]>([])
 let tokenEls: { start: number; end: number; el: HTMLElement }[] = []
@@ -63,21 +66,32 @@ const layout = () => {
   )
   const sorted = [...cuts].sort((a, b) => a - b)
   const covered = (a: number, b: number) => [...ranges.values()].some((r) => r.start <= a && r.end >= b)
+  let muted = false
   lines.value = text.split('\n').map((lineText) => {
+    const label = /^([A-Za-z_$][\w$]*):/.exec(lineText)
+    if (label) muted = label[1]!.startsWith('_')
     const lineStart = offset
     const lineEnd = offset + lineText.length
     offset = lineEnd + 1
+    // Indent is drawn as padding (with a hanging indent), so a wrapped line never breaks after its spaces.
+    const indent = /^ */.exec(lineText)![0].length
     const pieces: Piece[] = []
-    const points = [lineStart, ...sorted.filter((c) => c > lineStart && c < lineEnd), lineEnd]
+    const points = [lineStart + indent, ...sorted.filter((c) => c > lineStart && c < lineEnd), lineEnd]
     for (let i = 0; i < points.length - 1; i++) {
       const start = points[i]!
       const end = points[i + 1]!
       if (end > start) pieces.push({ text: text.slice(start, end), start, end, token: covered(start, end) })
     }
-    return { pieces, fresh: previousCode !== '' && fresh.has(lineText) && lineText.trim() !== '' }
+    return {
+      pieces,
+      indent,
+      muted,
+      fresh: previousCode !== '' && fresh.has(lineText) && lineText.trim() !== ''
+    }
   })
   previousCode = text
   void nextTick(() => {
+    fit()
     tokenEls = [...(root.value?.querySelectorAll<HTMLElement>('[data-start]') ?? [])].map((el) => ({
       start: Number(el.dataset.start),
       end: Number(el.dataset.end),
@@ -87,6 +101,25 @@ const layout = () => {
 }
 
 watch([code, liveId], layout)
+
+/** Shrink the type until the whole program fits the stage (down to a readable minimum, then scroll). */
+const pre = ref<HTMLElement>()
+const fit = () => {
+  const box = root.value
+  const el = pre.value
+  if (!box || !el) return
+  const { paddingTop, paddingBottom } = getComputedStyle(box)
+  const room = box.clientHeight - parseFloat(paddingTop) - parseFloat(paddingBottom)
+  let size = Math.min(20, Math.max(13, window.innerWidth * 0.0135))
+  el.style.fontSize = `${size}px`
+  // First try to fit the longest line without wrapping (down to 13px), then fit the height (down to 10px).
+  el.style.whiteSpace = 'pre'
+  // (+8: the line highlights bleed 4px each side via -mx-1)
+  while (el.scrollWidth > el.clientWidth + 8 && size > 13) el.style.fontSize = `${(size -= 0.5)}px`
+  el.style.whiteSpace = ''
+  while (el.offsetHeight > room && size > 10) el.style.fontSize = `${(size -= 0.5)}px`
+}
+const resize = new ResizeObserver(() => fit())
 
 let frame = 0
 const paint = () => {
@@ -106,10 +139,14 @@ const paint = () => {
 }
 
 onMounted(() => {
+  if (root.value) resize.observe(root.value)
   layout()
   frame = requestAnimationFrame(paint)
 })
-onBeforeUnmount(() => cancelAnimationFrame(frame))
+onBeforeUnmount(() => {
+  cancelAnimationFrame(frame)
+  resize.disconnect()
+})
 </script>
 
 <template>
@@ -121,12 +158,14 @@ onBeforeUnmount(() => cancelAnimationFrame(frame))
     </p>
     <pre
       v-else
+      ref="pre"
       class="font-mono text-[clamp(13px,1.35vw,20px)] leading-[1.75] whitespace-pre-wrap break-words [text-shadow:0_1px_12px_rgb(0_0_0/0.85)]"
     ><div
       v-for="(line, i) in lines"
       :key="`${i}:${previousCode.length}`"
-      class="rounded px-1 -mx-1"
-      :class="{ 'line-fresh': line.fresh }"
+      class="rounded pr-1 -mx-1 -indent-[2ch]"
+      :style="{ paddingLeft: `calc(${line.indent + 2}ch + 0.25rem)` }"
+      :class="{ 'line-fresh': line.fresh, 'opacity-35': line.muted }"
     ><template v-for="piece in line.pieces" :key="piece.start"><span
       v-if="piece.token"
       class="tok"

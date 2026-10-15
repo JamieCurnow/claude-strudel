@@ -36,7 +36,7 @@ const status = computed(() => {
     case 'queued':
       return `Lands bar ${cue.targetCycle} · in ${barsAway.value < 1 ? 'under a bar' : `${Math.ceil(barsAway.value)} bars`}${cue.late ? ' · late' : ''}`
     case 'ready':
-      return 'Armed: waiting for GO'
+      return deck.nextUp?.id === cue.id ? 'Armed: next on GO' : 'Armed: waiting'
     case 'idea':
       return cue.code ? 'Idea, ready to play' : 'Writing this idea…'
     case 'generating':
@@ -59,7 +59,11 @@ const streamingCode = computed(() => {
     }
     const move = partial.moves?.at(-1)
     const code =
-      move?.code ?? move?.blocks?.map((b) => `${b.name ?? ''}: ${b.code ?? '(removed)'}`).join('\n') ?? ''
+      move?.code ??
+      move?.blocks
+        ?.map((b) => `${b.name ?? ''}: ${b.code === null ? '(removed)' : (b.code ?? '')}`)
+        .join('\n') ??
+      ''
     return code.split('\n').slice(-7).join('\n')
   } catch {
     return ''
@@ -70,6 +74,11 @@ const diff = computed(() => {
   if (!open.value) return []
   const before = deck.live && deck.live.id !== props.cue.id ? deck.live.code : ''
   return diffLines(before, props.cue.code).filter((line) => line.type !== 'same' || before === '')
+})
+
+const hasActions = computed(() => {
+  const { status, code } = props.cue
+  return ['ready', 'queued', 'played', 'failed'].includes(status) || (status === 'idea' && !!code)
 })
 
 const timing = computed(() => {
@@ -121,7 +130,8 @@ const timing = computed(() => {
       </div>
     </div>
 
-    <div class="flex gap-1.5 mt-2 pl-11 empty:hidden">
+    <!-- v-if, not :empty: Vue leaves comment nodes for each false v-if, so :empty never matches. -->
+    <div v-if="hasActions" class="flex gap-1.5 mt-2 pl-11">
       <button
         v-if="cue.status === 'ready' || (cue.status === 'idea' && cue.code)"
         class="h-7 px-3 rounded bg-armed/90 text-[#0b0b22] text-sm font-bold hover:bg-armed"
@@ -144,8 +154,8 @@ const timing = computed(() => {
         Hold
       </button>
       <button
-        v-if="cue.status === 'played' || cue.status === 'live'"
-        class="h-7 px-3 rounded border border-line text-sm text-ink-dim hover:text-ink opacity-0 group-hover:opacity-100 focus:opacity-100"
+        v-if="cue.status === 'played'"
+        class="h-7 px-3 rounded border border-line text-sm text-ink-dim hover:text-ink"
         @click="deck.recall(cue.id)"
       >
         Play again

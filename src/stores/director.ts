@@ -3,10 +3,12 @@ import { parse as parsePartial, Allow } from 'partial-json'
 import { ref, watch } from 'vue'
 import type { ChatMessage, DirectorOutput, Idea, MoveSpec } from '#shared/director'
 import { engine } from '@/engine/engine'
+import { planReply } from '@/engine/timing'
 import { applyBlockChanges, setMuted } from '@/engine/program'
 import { DirectorError, streamDirect, type StreamResult } from '@/director/client'
-import { parseQuickCommand, type QuickCommand } from '@/director/commands'
+import { matchCueTitle, parseQuickCommand, type QuickCommand } from '@/director/commands'
 import { buildDirectionMessage, buildRepairMessage } from '@/director/context'
+import { useClock } from './clock'
 import { useDeck, type Cue, type CueMetrics } from './deck'
 import { useSettings } from './settings'
 import { useVisuals } from './visuals'
@@ -29,6 +31,7 @@ const peek = (text: string) => {
 
 export const useDirector = defineStore('director', () => {
   const deck = useDeck()
+  const clock = useClock()
   const visuals = useVisuals()
   const { settings } = useSettings()
 
@@ -138,13 +141,15 @@ export const useDirector = defineStore('director', () => {
   }
 
   const launchAll = async (cues: Cue[]) => {
-    for (const cue of cues) {
-      if (settings.launchMode === 'arm' || cue.when.type === 'manual') {
-        await deck.launch(cue.id, { when: { type: 'manual', bars: null } })
-      } else {
-        await deck.launch(cue.id)
-      }
-    }
+    const arm = settings.launchMode === 'arm'
+    const targets = planReply({
+      whens: cues.map((cue) => (arm ? { type: 'manual' as const, bars: null } : cue.when)),
+      requestCycle: cues[0]?.requestCycle ?? 0,
+      frontier: clock.frontier(),
+      phraseBars: settings.phraseBars,
+      started: engine.started
+    })
+    for (const [i, cue] of cues.entries()) await deck.launch(cue.id, { target: targets[i] ?? null })
   }
 
   const process = async (pending: Pending) => {
@@ -351,7 +356,8 @@ export const useDirector = defineStore('director', () => {
       when: { type: settings.goQuantize, bars: null },
       code,
       bpm: null,
-      status: 'ready'
+      status: 'ready',
+      inheritStart: basis.moveStart
     })
     const result = await deck.compile(cue)
     if (!result.ok) return flash(result.errors[0] ?? 'Could not apply')
@@ -373,6 +379,7 @@ export const useDirector = defineStore('director', () => {
       const last = deck.queued.at(-1)
       return last ? deck.cancel(last.id) : undefined
     }
+    if (command.type === 'recall') return
     return muteBlocks(command)
   }
 
@@ -381,7 +388,12 @@ export const useDirector = defineStore('director', () => {
     const direction = input.trim()
     if (!direction) return
     const command = parseQuickCommand(direction)
-    if (command) return runCommand(command)
+    if (command?.type === 'recall') {
+      // "back to the drop" names a cue: replay it instantly. Otherwise it's a musical direction for Claude.
+      const played = deck.cues.filter((cue) => cue.number > 0 && ['played', 'live'].includes(cue.status))
+      const match = matchCueTitle({ phrase: command.title, cues: played })
+      if (match) return deck.recall(match.id)
+    } else if (command) return runCommand(command)
     stopIdeas()
     error.value = ''
     queue.value.push({ direction, requestCycle: opts.requestCycle ?? engine.position() })

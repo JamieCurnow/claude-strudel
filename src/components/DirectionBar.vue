@@ -17,7 +17,7 @@ const send = async () => {
   await director.direct(direction)
 }
 
-const nextGo = computed(() => deck.ready[0] ?? deck.ideas.find((cue) => cue.code))
+const nextGo = computed(() => deck.nextUp)
 const listening = computed(() => voice.status === 'listening' || voice.status === 'connecting')
 const placeholder = computed(() => {
   if (voice.status === 'listening') return voice.heard || 'Listening…'

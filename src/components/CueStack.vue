@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDeck } from '@/stores/deck'
 import CueCard from './CueCard.vue'
 
@@ -10,14 +10,19 @@ const list = ref<HTMLElement>()
 const past = computed(() => deck.history.slice(-30))
 const upcoming = computed(() => [...deck.queued, ...deck.generating, ...deck.ready, ...deck.failed])
 
-// Keep "now" in view as the show moves on.
+// Keep "now" at the top of the stack as the show moves on, so what's next and the ideas stay in view.
+const scrollToNow = async (behavior: ScrollBehavior = 'smooth') => {
+  await nextTick()
+  const box = list.value
+  const now = box?.querySelector<HTMLElement>('[data-now], [data-next]')
+  if (!box) return
+  box.scrollTo({ top: now ? now.offsetTop - box.offsetTop - 8 : box.scrollHeight, behavior })
+}
 watch(
-  () => deck.live?.id,
-  async () => {
-    await nextTick()
-    list.value?.querySelector('[data-now]')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }
+  () => [deck.live?.id, upcoming.value.length, deck.ideas.length],
+  () => scrollToNow()
 )
+onMounted(() => scrollToNow('instant'))
 </script>
 
 <template>
@@ -31,7 +36,12 @@ watch(
       <div v-if="deck.live" data-now>
         <CueCard :cue="deck.live" />
       </div>
-      <CueCard v-for="cue in upcoming" :key="cue.id" :cue="cue" />
+      <CueCard
+        v-for="(cue, i) in upcoming"
+        :key="cue.id"
+        :cue="cue"
+        :data-next="!deck.live && i === 0 ? '' : undefined"
+      />
       <template v-if="deck.ideas.length">
         <h3 class="text-sm text-ink-faint pt-3 px-1">
           Ideas Claude wrote ahead · press 1–{{ deck.ideas.length }}

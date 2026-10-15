@@ -12,10 +12,11 @@ You're the director, Claude is the live coder, and Strudel is the band.
   - Cues land **on the bar**, quantised to when you said it: "drop in 8 bars" means 8 bars from when you spoke, however long Claude takes.
   - "Now" means the next bar.
   - Bigger changes land on the next phrase.
+  - A reply's moves always land in order. If Claude answers too late for "drop in 8 bars", the build still plays first and the drop keeps its planned distance after it.
 - **Auto or Arm.** In Auto, cues launch when they're due. In Arm, every cue waits for you to hit **GO**. "Have a drop ready" arms a cue in either mode.
 - **Ideas, written ahead.** With each reply, Claude suggests 2-3 next moves and the app writes them in the background. They sit greyed out on the deck, and **1-3** or GO plays one instantly. Giving a new direction replaces them.
 - **History you can jump back to.** Any past cue can be played again ("back to the drop"), and **Cmd-Z** recalls the previous cue. Claude remembers the whole set, so "the hats from the first track" works.
-- **Quick commands skip Claude** and happen instantly: `go`, `undo`, `stop`, `start`, `cancel`, `mute the hats`, `unmute bass and pad`, `idea two`.
+- **Quick commands skip Claude** and happen instantly: `go`, `undo`, `stop`, `start`, `cancel`, `mute the hats`, `unmute bass and pad`, `idea two`, and `back to the drop` (replays the cue with that title; anything looser goes to Claude).
 - **Claude directs the stage too.** It sets the background and accent colours, big overlay text, a visualiser (scope, spectrum, pianoroll, punchcard, spiral) or a live **Hydra** sketch, all landing on the same bar as the music.
 - **Code on show.** The live program fills the stage, and each mini-notation token lights up as it plays.
 
