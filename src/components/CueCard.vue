@@ -36,7 +36,7 @@ const status = computed(() => {
     case 'live':
       return `live · bar ${Math.max(0, Math.round(cue.landedCycle ?? 0))}`
     case 'queued':
-      return `bar ${cue.targetCycle} · in ${barsAway.value < 1 ? '<1' : Math.ceil(barsAway.value)}${cue.late ? ' · late' : ''}`
+      return `${cue.undoes ? 'back · ' : ''}bar ${cue.targetCycle} · in ${barsAway.value < 1 ? '<1' : Math.ceil(barsAway.value)}${cue.late ? ' · late' : ''}`
     case 'ready':
       return deck.nextUp?.id === cue.id ? 'next' : 'armed'
     case 'idea':
@@ -80,7 +80,11 @@ const diff = computed(() => {
 
 const hasActions = computed(() => {
   const { status, code } = props.cue
-  return ['ready', 'queued', 'played', 'failed'].includes(status) || (status === 'idea' && !!code)
+  return (
+    ['ready', 'queued', 'played', 'failed'].includes(status) ||
+    (status === 'idea' && !!code) ||
+    (status === 'live' && deck.history.length > 0)
+  )
 })
 
 const timing = computed(() => {
@@ -175,6 +179,14 @@ const timing = computed(() => {
         @click="deck.recall(cue.id)"
       >
         Again
+      </button>
+      <button
+        v-if="cue.status === 'live' && deck.history.length"
+        class="h-7 px-3 rounded border border-line text-sm text-ink-dim hover:text-ink"
+        title="Back a step (⌘Z)"
+        @click="deck.undo()"
+      >
+        Back
       </button>
       <button
         v-if="cue.status === 'ready' || cue.status === 'failed'"
