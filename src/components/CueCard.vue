@@ -4,9 +4,11 @@ import { parse as parsePartial, Allow } from 'partial-json'
 import { diffLines } from '@/engine/program'
 import { useClock } from '@/stores/clock'
 import { useDeck, type Cue } from '@/stores/deck'
+import { useDirector } from '@/stores/director'
 
 const props = defineProps<{ cue: Cue; hotkey?: string }>()
 const deck = useDeck()
+const director = useDirector()
 const clock = useClock()
 const open = ref(false)
 
@@ -40,7 +42,7 @@ const status = computed(() => {
     case 'idea':
       return cue.code ? '' : 'writing'
     case 'generating':
-      return 'writing'
+      return cue.partial === undefined ? 'waiting' : 'writing'
     case 'failed':
       return 'failed'
     case 'played':
@@ -104,7 +106,12 @@ const timing = computed(() => {
       <div class="min-w-0 flex-1">
         <button class="text-left w-full" @click="open = !open">
           <h3 class="font-semibold leading-6 truncate">{{ cue.title }}</h3>
-          <p v-if="cue.summary" class="text-sm text-ink-dim leading-snug line-clamp-2">{{ cue.summary }}</p>
+          <p
+            v-if="cue.summary && cue.summary !== cue.title"
+            class="text-sm text-ink-dim leading-snug line-clamp-2"
+          >
+            {{ cue.summary }}
+          </p>
         </button>
         <p class="text-xs mt-1 text-ink-dim tabular-nums">
           {{ status }}<span v-if="timing" class="text-ink-faint">{{ status ? ' · ' : '' }}{{ timing }}</span>
@@ -128,6 +135,15 @@ const timing = computed(() => {
           :class="line.type === 'add' ? 'text-amber' : line.type === 'del' ? 'text-ink-faint line-through' : 'text-ink-dim'"
         >{{ line.text || ' ' }}</span></pre>
       </div>
+      <button
+        v-if="cue.status === 'generating'"
+        class="shrink-0 -mr-1 size-7 rounded text-sm text-ink-faint hover:text-ink hover:bg-white/5"
+        aria-label="Cancel"
+        title="Cancel (Esc)"
+        @click="director.cancel(cue.id)"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- v-if, not :empty: Vue leaves comment nodes for each false v-if, so :empty never matches. -->

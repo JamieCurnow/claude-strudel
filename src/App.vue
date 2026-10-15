@@ -68,14 +68,14 @@ const onKeyDown = (event: KeyboardEvent) => {
   if (showSettings.value) return
   if (event.key === 'Escape') {
     ;(event.target as HTMLElement).blur?.()
-    if (director.busy) director.abort()
+    if (director.busy) director.cancelLatest()
     else if (deck.queued.length) void deck.cancel(deck.queued.at(-1)!.id)
     return
   }
   if (typing(event)) return
   if (event.code === 'Space') {
     event.preventDefault()
-    if (!event.repeat) void voice.press()
+    if (!event.repeat) voice.press()
   } else if (event.key === 'g' || event.key === 'G') void deck.go()
   else if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
     event.preventDefault()
