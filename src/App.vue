@@ -58,7 +58,14 @@ const typing = (event: KeyboardEvent) => {
 }
 
 const onKeyDown = (event: KeyboardEvent) => {
-  if (curtain.value || showSettings.value) return
+  if (curtain.value) {
+    if (booted.value && (event.key === 'Enter' || event.code === 'Space')) {
+      event.preventDefault()
+      void start()
+    }
+    return
+  }
+  if (showSettings.value) return
   if (event.key === 'Escape') {
     ;(event.target as HTMLElement).blur?.()
     if (director.busy) director.abort()
@@ -103,7 +110,7 @@ onBeforeUnmount(() => {
     <TransportBar v-show="!stageView" @settings="showSettings = true" @stage="stageView = true" />
     <main
       class="flex-1 min-h-0 grid"
-      :class="stageView ? 'grid-cols-1' : 'grid-cols-[1fr_minmax(300px,380px)]'"
+      :class="stageView ? 'grid-cols-[minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)_minmax(300px,380px)]'"
     >
       <CodeStage />
       <CueStack v-show="!stageView" />
@@ -111,10 +118,11 @@ onBeforeUnmount(() => {
     <DirectionBar v-show="!stageView" ref="bar" />
     <button
       v-if="stageView"
-      class="absolute top-3 right-4 text-sm text-ink-faint hover:text-ink"
+      class="absolute top-3 right-4 text-sm text-ink-faint opacity-0 hover:opacity-100 focus:opacity-100"
+      aria-label="Show controls"
       @click="stageView = false"
     >
-      Show controls (S)
+      S
     </button>
     <p
       v-if="stageView && director.say"

@@ -59,60 +59,46 @@ const newSet = () => {
         </div>
         <label class="flex items-center gap-2 text-sm text-ink-dim">
           <input v-model="settings.fast" type="checkbox" :disabled="settings.model !== 'claude-opus-5-5'" />
-          Fast mode (Opus only, ~2.5× quicker, costs 2×; falls back to normal speed if your org has no
-          fast-mode quota)
+          Fast <span class="text-ink-faint">Opus · 2× cost</span>
         </label>
       </fieldset>
 
       <fieldset class="space-y-2">
-        <legend class="font-semibold mb-1">How Claude edits</legend>
+        <legend class="font-semibold mb-1">Edits</legend>
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.editMode" type="radio" value="blocks" />
           <span
-            ><span class="text-ink mr-1">Blocks</span>
-            <span class="text-ink-dim"
-              >Claude sends only the parts it changes. Fewer tokens, quicker.</span
-            ></span
+            ><span class="text-ink mr-1.5">Blocks</span
+            ><span class="text-ink-faint">changed blocks only</span></span
           >
         </label>
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.editMode" type="radio" value="full" />
           <span
-            ><span class="text-ink mr-1">Full</span>
-            <span class="text-ink-dim"
-              >Claude rewrites the whole program every time. Slower, sometimes more coherent.</span
-            ></span
+            ><span class="text-ink mr-1.5">Full</span><span class="text-ink-faint">whole program</span></span
           >
         </label>
       </fieldset>
 
       <fieldset class="space-y-2">
-        <legend class="font-semibold mb-1">When cues launch</legend>
+        <legend class="font-semibold mb-1">Launch</legend>
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.launchMode" type="radio" value="auto" />
-          <span
-            ><span class="text-ink mr-1">Auto</span>
-            <span class="text-ink-dim"
-              >Cues land when you said ("in 8 bars", "now"), otherwise on the next phrase.</span
-            ></span
-          >
+          <span><span class="text-ink mr-1.5">Auto</span><span class="text-ink-faint">on cue</span></span>
         </label>
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.launchMode" type="radio" value="arm" />
-          <span
-            ><span class="text-ink mr-1">Arm</span>
-            <span class="text-ink-dim">Every cue waits for you to hit GO.</span></span
-          >
+          <span><span class="text-ink mr-1.5">Arm</span><span class="text-ink-faint">wait for GO</span></span>
         </label>
         <div class="flex items-center gap-2 text-sm">
-          <span class="text-ink-dim w-28">GO lands on</span>
+          <span class="text-ink-dim w-28">GO lands</span>
           <select v-model="settings.goQuantize" class="bg-black/50 border border-line rounded px-2 py-1">
-            <option value="next_bar">the next bar</option>
-            <option value="next_phrase">the next phrase</option>
+            <option value="next_bar">next bar</option>
+            <option value="next_phrase">next phrase</option>
           </select>
         </div>
         <div class="flex items-center gap-2 text-sm">
-          <span class="text-ink-dim w-28">Phrase length</span>
+          <span class="text-ink-dim w-28">Phrase</span>
           <select
             v-model.number="settings.phraseBars"
             class="bg-black/50 border border-line rounded px-2 py-1"
@@ -134,10 +120,9 @@ const newSet = () => {
             <option :value="2">2 ideas</option>
             <option :value="3">3 ideas</option>
           </select>
-          <span class="text-ink-faint">Each costs one extra Claude call per direction.</span>
         </div>
         <label class="flex items-center gap-2 text-sm text-ink-dim">
-          <input v-model="settings.autoRepair" type="checkbox" /> Ask Claude to fix code that fails validation
+          <input v-model="settings.autoRepair" type="checkbox" /> Auto-fix failed code
         </label>
       </fieldset>
 
@@ -147,7 +132,7 @@ const newSet = () => {
           v-model="settings.password"
           type="password"
           class="w-full bg-black/50 border border-line rounded px-3 py-2 text-sm"
-          placeholder="App password (only if the server asks for one)"
+          placeholder="Password"
         />
       </fieldset>
 
@@ -155,7 +140,7 @@ const newSet = () => {
 
       <div class="pt-2 border-t border-line">
         <button class="h-9 px-4 rounded-md border border-fail/50 text-fail hover:bg-fail/10" @click="newSet">
-          Start a new set
+          New set
         </button>
       </div>
     </aside>

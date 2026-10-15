@@ -114,8 +114,15 @@ const fit = () => {
   el.style.fontSize = `${size}px`
   // First try to fit the longest line without wrapping (down to 13px), then fit the height (down to 10px).
   el.style.whiteSpace = 'pre'
-  // (+8: the line highlights bleed 4px each side via -mx-1)
-  while (el.scrollWidth > el.clientWidth + 8 && size > 13) el.style.fontSize = `${(size -= 0.5)}px`
+  // Measure the text itself: scrollWidth rounds away the last pixel, and one pixel is enough to wrap.
+  const range = document.createRange()
+  const overflows = () =>
+    [...el.children].some((line) => {
+      range.selectNodeContents(line)
+      const right = line.getBoundingClientRect().right - parseFloat(getComputedStyle(line).paddingRight)
+      return range.getBoundingClientRect().right > right
+    })
+  while (overflows() && size > 13) el.style.fontSize = `${(size -= 0.5)}px`
   el.style.whiteSpace = ''
   while (el.offsetHeight > room && size > 10) el.style.fontSize = `${(size -= 0.5)}px`
 }
@@ -150,12 +157,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section ref="root" class="relative h-full overflow-auto scroll-thin px-8 py-6" aria-label="Live code">
-    <p v-if="!code" class="text-ink-dim max-w-md mt-[18vh] text-lg leading-relaxed">
-      Nothing's playing yet. Say or type how the music should sound, like
-      <span class="text-ink">"classic jungle, dark, heavy bassline"</span>, and Claude will write the first
-      cue.
-    </p>
+  <section
+    ref="root"
+    class="relative h-full min-w-0 overflow-auto scroll-thin px-8 py-6"
+    aria-label="Live code"
+  >
+    <span v-if="!code" class="block w-3 h-7 mt-1 bg-ink-faint/60 animate-pulse" aria-hidden="true" />
     <pre
       v-else
       ref="pre"

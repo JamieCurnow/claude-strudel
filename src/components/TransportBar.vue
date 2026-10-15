@@ -59,18 +59,37 @@ const toggle = async () => (clock.started ? engine.stop() : engine.start())
     </div>
 
     <div class="ml-auto flex items-center gap-2 text-sm">
-      <span v-if="director.busy" class="text-amber">Claude is writing…</span>
+      <span
+        v-if="director.busy"
+        class="size-2.5 rounded-full bg-amber animate-pulse"
+        role="status"
+        aria-label="Claude is writing"
+      />
       <span class="text-ink-faint hidden md:inline"
         >{{ model }} · {{ settings.editMode }} · {{ settings.launchMode }}</span
       >
-      <button class="h-9 px-3 rounded-md text-ink-dim hover:text-ink hover:bg-white/5" @click="emit('stage')">
-        Stage view
+      <button
+        class="size-9 grid place-items-center rounded-md text-ink-dim hover:text-ink hover:bg-white/5"
+        aria-label="Stage view (S)"
+        title="Stage view (S)"
+        @click="emit('stage')"
+      >
+        <svg viewBox="0 0 24 24" class="size-5 fill-none stroke-current stroke-2 [stroke-linecap:round]">
+          <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+        </svg>
       </button>
       <button
-        class="h-9 px-3 rounded-md text-ink-dim hover:text-ink hover:bg-white/5"
+        class="size-9 grid place-items-center rounded-md text-ink-dim hover:text-ink hover:bg-white/5"
+        aria-label="Settings"
+        title="Settings"
         @click="emit('settings')"
       >
-        Settings
+        <svg viewBox="0 0 24 24" class="size-5 fill-none stroke-current stroke-2 [stroke-linecap:round]">
+          <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+          <circle cx="16" cy="6" r="2" />
+          <circle cx="10" cy="12" r="2" />
+          <circle cx="18" cy="18" r="2" />
+        </svg>
       </button>
     </div>
   </header>

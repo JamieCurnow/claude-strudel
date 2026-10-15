@@ -20,11 +20,8 @@ const send = async () => {
 const nextGo = computed(() => deck.nextUp)
 const listening = computed(() => voice.status === 'listening' || voice.status === 'connecting')
 const placeholder = computed(() => {
-  if (voice.status === 'listening') return voice.heard || 'Listening…'
-  if (voice.status === 'finishing') return voice.heard || 'Finishing…'
-  return director.queue.length
-    ? `${director.queue.length} more queued for Claude…`
-    : 'Tell the band what to do next'
+  if (voice.status === 'listening' || voice.status === 'finishing') return voice.heard || '…'
+  return director.queue.length ? `+${director.queue.length}` : ''
 })
 </script>
 
@@ -41,7 +38,7 @@ const placeholder = computed(() => {
     </div>
     <div class="flex items-stretch gap-3">
       <button
-        class="relative shrink-0 w-28 rounded-lg border text-sm font-semibold transition-colors overflow-hidden"
+        class="relative shrink-0 w-20 rounded-lg border text-sm font-semibold transition-colors overflow-hidden"
         :class="
           listening
             ? 'border-live text-ink bg-live/20'
@@ -57,8 +54,15 @@ const placeholder = computed(() => {
           :style="{ width: `${Math.min(100, voice.level * 300)}%` }"
           aria-hidden="true"
         />
-        <span class="relative">{{ listening ? 'Listening' : 'Hold to talk' }}</span>
-        <span class="relative block text-[11px] font-normal text-ink-faint">or hold Space</span>
+        <svg
+          viewBox="0 0 24 24"
+          class="relative mx-auto size-6 fill-none stroke-current stroke-2 [stroke-linecap:round]"
+          aria-hidden="true"
+        >
+          <rect x="9" y="3" width="6" height="11" rx="3" />
+          <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+        </svg>
+        <kbd class="relative block mt-0.5 text-[10px] font-normal text-ink-faint font-sans">Space</kbd>
       </button>
       <form class="flex-1 flex" @submit.prevent="send">
         <label class="sr-only" for="direction">Direction</label>
