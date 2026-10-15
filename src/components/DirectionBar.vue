@@ -47,7 +47,7 @@ const placeholder = computed(() => {
         aria-label="Hold to talk"
         @pointerdown.prevent="voice.press()"
         @pointerup.prevent="voice.release()"
-        @pointerleave="voice.status === 'listening' && voice.release()"
+        @pointerleave="['listening', 'connecting'].includes(voice.status) && voice.release()"
       >
         <span
           class="absolute inset-y-0 left-0 bg-live/30 transition-[width] duration-75"

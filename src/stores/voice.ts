@@ -63,9 +63,12 @@ interface DeepgramResult {
   channel?: { alternatives?: { transcript?: string }[] }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 /**
- * Hold-to-talk voice input. Press opens the mic + a WebSocket to the Worker's Deepgram proxy, release
- * finalises the transcript and sends it as a direction (timed from the bar you started talking on).
+ * Hold-to-talk voice input. Press starts capturing straight away: audio waits in a backlog while the mic and
+ * the WebSocket to the Worker's Deepgram proxy open (~0.5 s cold), then streams live. Release finalises the
+ * transcript and sends it as a direction (timed from the bar you started talking on).
  */
 export const useVoice = defineStore('voice', () => {
   const status = ref<Status>('off')
@@ -77,11 +80,21 @@ export const useVoice = defineStore('voice', () => {
   const director = useDirector()
   const { settings } = useSettings()
 
-  let mic: Mic | undefined
+  let mic: Promise<Mic> | undefined
   let socket: WebSocket | undefined
   let finals: string[] = []
-  let sending = false
-  let pressCycle = 0
+  /** Mic audio belongs to an utterance... */
+  let recording = false
+  /** ...and goes straight to the socket (otherwise it waits in the backlog). */
+  let streaming = false
+  let backlog: Int16Array<ArrayBuffer>[] = []
+  /** Every audio chunk of the last utterance (dev builds: `__show.voice.replay()`). */
+  let clip: Int16Array<ArrayBuffer>[] = []
+  let utterance = 0
+  /** Resolves with the press's bar once its audio is streaming (undefined if it failed). */
+  let starting: Promise<number | undefined> = Promise.resolve(undefined)
+  /** Resolves once the previous utterance's transcript is in, so the next one can't bleed into it. */
+  let finishing: Promise<unknown> = Promise.resolve()
   let keepAlive: ReturnType<typeof setInterval> | undefined
   let idleClose: ReturnType<typeof setTimeout> | undefined
   let meter = 0
@@ -90,6 +103,21 @@ export const useVoice = defineStore('voice', () => {
   const keyterms = () => {
     const blocks = deck.basis ? parseProgram(deck.basis.code).blocks.map((block) => block.name) : []
     return [...new Set([...BASE_KEYTERMS, ...blocks])]
+  }
+
+  const onAudio = (pcm: Int16Array<ArrayBuffer>) => {
+    if (!recording) return
+    if (import.meta.env.DEV) clip.push(pcm)
+    if (streaming && socket?.readyState === WebSocket.OPEN) socket.send(pcm)
+    else backlog.push(pcm)
+  }
+
+  const openMicOnce = () => {
+    mic ??= openMic(onAudio).catch((err: unknown) => {
+      mic = undefined
+      throw err
+    })
+    return mic
   }
 
   const connect = () =>
@@ -123,49 +151,64 @@ export const useVoice = defineStore('voice', () => {
       socket = ws
       clearInterval(keepAlive)
       keepAlive = setInterval(() => {
-        if (!sending && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'KeepAlive' }))
+        if (!streaming && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'KeepAlive' }))
       }, 4000)
     })
 
-  const press = async () => {
+  const press = () => {
     if (status.value === 'listening' || status.value === 'connecting') return
+    const id = ++utterance
+    const requestCycle = engine.position()
     error.value = ''
     clearTimeout(idleClose)
-    pressCycle = engine.position()
-    finals = []
-    interim.value = ''
-    heard.value = ''
+    // Capture from now. If the last utterance is still finalising, its tail is cut and this one waits its turn.
+    streaming = false
+    recording = true
+    backlog = []
+    clip = []
     status.value = 'connecting'
-    try {
-      await connect()
-      // The mic outlives individual sockets, so always send to the current one.
-      mic ??= await openMic((pcm) => {
-        if (sending && socket?.readyState === WebSocket.OPEN) socket.send(pcm)
-      })
-      sending = true
-      status.value = 'listening'
-      const tick = () => {
-        level.value = mic?.level() ?? 0
-        if (status.value === 'listening') meter = requestAnimationFrame(tick)
+    const previous = finishing
+    starting = (async () => {
+      let input: Mic
+      try {
+        ;[input] = await Promise.all([openMicOnce(), connect(), previous])
+      } catch (err) {
+        if (id === utterance) {
+          recording = false
+          status.value = 'off'
+          error.value = err instanceof Error ? err.message : String(err)
+        }
+        return undefined
       }
-      meter = requestAnimationFrame(tick)
-    } catch (err) {
-      status.value = 'off'
-      error.value = err instanceof Error ? err.message : String(err)
-    }
+      if (id !== utterance) return undefined
+      finals = []
+      interim.value = ''
+      heard.value = ''
+      for (const pcm of backlog) socket?.send(pcm)
+      backlog = []
+      streaming = true
+      if (status.value === 'connecting') {
+        status.value = 'listening'
+        const tick = () => {
+          level.value = input.level()
+          if (status.value === 'listening' && id === utterance) meter = requestAnimationFrame(tick)
+        }
+        tick()
+      }
+      return requestCycle
+    })()
   }
 
-  const release = async () => {
-    if (status.value !== 'listening') {
-      if (status.value === 'connecting') status.value = 'off'
-      return
-    }
-    status.value = 'finishing'
-    cancelAnimationFrame(meter)
-    level.value = 0
+  /** Stop capturing, flush Deepgram and return the utterance's transcript. */
+  const finish = async (opts: { id: number; started: Promise<number | undefined> }) => {
+    const requestCycle = await opts.started
+    if (requestCycle === undefined) return undefined
     // Keep sending briefly so the last syllable isn't clipped, then ask Deepgram to flush.
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    sending = false
+    await sleep(250)
+    if (opts.id === utterance) {
+      recording = false
+      streaming = false
+    }
     const done = new Promise<void>((resolve) => {
       finalised = resolve
       setTimeout(resolve, 1500)
@@ -174,16 +217,46 @@ export const useVoice = defineStore('voice', () => {
     await done
     finalised = undefined
     const text = [...finals, interim.value].filter(Boolean).join(' ').trim()
-    status.value = 'off'
-    interim.value = ''
-    heard.value = text
-    idleClose = setTimeout(() => {
-      socket?.close()
-      mic?.stop()
-      mic = undefined
-    }, 60_000)
-    if (text) await director.direct(text, { requestCycle: pressCycle })
+    return { text, requestCycle }
   }
 
-  return { status, interim, heard, error, level, press, release }
+  const release = async () => {
+    if (status.value !== 'listening' && status.value !== 'connecting') return
+    const id = utterance
+    status.value = 'finishing'
+    cancelAnimationFrame(meter)
+    level.value = 0
+    const result = finish({ id, started: starting })
+    finishing = result
+    const said = await result
+    if (id === utterance) {
+      status.value = 'off'
+      interim.value = ''
+      if (said) heard.value = said.text
+      idleClose = setTimeout(() => {
+        socket?.close()
+        void mic?.then((m) => m.stop())
+        mic = undefined
+      }, 60_000)
+    }
+    if (said?.text) await director.direct(said.text, { requestCycle: said.requestCycle })
+  }
+
+  /** Dev aid: play back exactly what Deepgram was sent for the last utterance. */
+  const replay = async () => {
+    const samples = new Float32Array(clip.reduce((n, pcm) => n + pcm.length, 0))
+    let offset = 0
+    for (const pcm of clip) for (const sample of pcm) samples[offset++] = sample / 0x8000
+    const context = new AudioContext({ sampleRate: SAMPLE_RATE })
+    const buffer = context.createBuffer(1, samples.length, SAMPLE_RATE)
+    buffer.copyToChannel(samples, 0)
+    const source = context.createBufferSource()
+    source.buffer = buffer
+    source.connect(context.destination)
+    source.onended = () => void context.close()
+    source.start()
+    return { seconds: samples.length / SAMPLE_RATE }
+  }
+
+  return { status, interim, heard, error, level, press, release, replay }
 })
