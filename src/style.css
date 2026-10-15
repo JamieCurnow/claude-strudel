@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
-  Claude Strudel - a cue stack for a live set.
+  StrudelClaw - a cue stack for a live set.
   Colour comes from theatre lighting gels: each cue state has the colour a stage manager would read it by.
     standby (queued, landing on a bar) = bastard amber
     live (on air)                      = primary red

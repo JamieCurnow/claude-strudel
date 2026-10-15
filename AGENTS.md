@@ -1,6 +1,6 @@
 # Agent notes
 
-Claude Strudel: a Vue SPA + one Cloudflare Worker. Read `docs/ARCHITECTURE.md` before changing the engine or the director.
+StrudelClaw: a Vue SPA + one Cloudflare Worker. Read `docs/ARCHITECTURE.md` before changing the engine or the director.
 
 ## Commands
 

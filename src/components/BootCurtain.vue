@@ -5,7 +5,10 @@ const emit = defineEmits<{ start: [] }>()
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 grid place-items-center bg-[#07060b]/90 backdrop-blur-sm">
+  <div
+    class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-12 bg-[#07060b]/90 backdrop-blur-sm"
+  >
+    <h1 class="expanded font-black text-[clamp(44px,8vw,120px)] leading-none tracking-tight">StrudelClaw</h1>
     <button
       class="group relative size-28 rounded-full grid place-items-center transition-[transform,opacity] disabled:opacity-40 enabled:hover:scale-105"
       :disabled="!props.ready"

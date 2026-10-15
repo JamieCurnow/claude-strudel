@@ -1,6 +1,6 @@
 # Roadmap
 
-Claude Strudel lets you direct a live set in plain English, by voice or by typing. Claude writes and evolves the [Strudel](https://strudel.cc) code, and every change lands on the bar, timed against the music. You're the director: "classic jungle tune, dark, heavy bassline" … "build it up, more hats, more snare reverb" … "drop in 8 bars, key change, darker".
+StrudelClaw lets you direct a live set in plain English, by voice or by typing. Claude writes and evolves the [Strudel](https://strudel.cc) code, and every change lands on the bar, timed against the music. You're the director: "classic jungle tune, dark, heavy bassline" … "build it up, more hats, more snare reverb" … "drop in 8 bars, key change, darker".
 
 ## What we learned from the research (Oct 2026)
 
