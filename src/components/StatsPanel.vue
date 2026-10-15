@@ -30,10 +30,8 @@ const rows = computed(() => {
 
 <template>
   <section>
-    <h3 class="font-semibold mb-2">Latency by setup</h3>
-    <p v-if="!rows.length" class="text-sm text-ink-faint">
-      Give a few directions and the averages show up here.
-    </p>
+    <h3 class="font-semibold mb-2">Latency</h3>
+    <p v-if="!rows.length" class="text-sm text-ink-faint">—</p>
     <table v-else class="w-full text-sm tabular-nums">
       <thead class="text-ink-faint text-left">
         <tr>
@@ -42,7 +40,7 @@ const rows = computed(() => {
           <th class="font-normal">First token</th>
           <th class="font-normal">Total</th>
           <th class="font-normal">Tokens</th>
-          <th class="font-normal">Needed a fix</th>
+          <th class="font-normal">Fixed</th>
         </tr>
       </thead>
       <tbody>

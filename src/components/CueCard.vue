@@ -32,19 +32,19 @@ const status = computed(() => {
   const cue = props.cue
   switch (cue.status) {
     case 'live':
-      return `Live since bar ${Math.max(0, Math.round(cue.landedCycle ?? 0))}`
+      return `live · bar ${Math.max(0, Math.round(cue.landedCycle ?? 0))}`
     case 'queued':
-      return `Lands bar ${cue.targetCycle} · in ${barsAway.value < 1 ? 'under a bar' : `${Math.ceil(barsAway.value)} bars`}${cue.late ? ' · late' : ''}`
+      return `bar ${cue.targetCycle} · in ${barsAway.value < 1 ? '<1' : Math.ceil(barsAway.value)}${cue.late ? ' · late' : ''}`
     case 'ready':
-      return deck.nextUp?.id === cue.id ? 'Armed: next on GO' : 'Armed: waiting'
+      return deck.nextUp?.id === cue.id ? 'next' : 'armed'
     case 'idea':
-      return cue.code ? 'Idea, ready to play' : 'Writing this idea…'
+      return cue.code ? '' : 'writing'
     case 'generating':
-      return 'Claude is writing…'
+      return 'writing'
     case 'failed':
-      return 'Did not validate'
+      return 'failed'
     case 'played':
-      return `Played from bar ${Math.max(0, Math.round(cue.landedCycle ?? 0))}`
+      return `bar ${Math.max(0, Math.round(cue.landedCycle ?? 0))}`
     default:
       return ''
   }
@@ -107,7 +107,7 @@ const timing = computed(() => {
           <p v-if="cue.summary" class="text-sm text-ink-dim leading-snug line-clamp-2">{{ cue.summary }}</p>
         </button>
         <p class="text-xs mt-1 text-ink-dim tabular-nums">
-          {{ status }}<span v-if="timing" class="text-ink-faint"> · {{ timing }}</span>
+          {{ status }}<span v-if="timing" class="text-ink-faint">{{ status ? ' · ' : '' }}{{ timing }}</span>
         </p>
         <pre
           v-if="cue.status === 'generating' && streamingCode"
@@ -144,7 +144,7 @@ const timing = computed(() => {
         class="h-7 px-3 rounded border border-line text-sm text-ink-dim hover:text-ink"
         @click="deck.launch(cue.id, { quantize: 'next_phrase' })"
       >
-        On the phrase
+        Phrase
       </button>
       <button
         v-if="cue.status === 'queued'"
@@ -158,14 +158,16 @@ const timing = computed(() => {
         class="h-7 px-3 rounded border border-line text-sm text-ink-dim hover:text-ink"
         @click="deck.recall(cue.id)"
       >
-        Play again
+        Again
       </button>
       <button
         v-if="cue.status === 'ready' || cue.status === 'failed'"
-        class="h-7 px-3 rounded text-sm text-ink-faint hover:text-ink"
+        class="h-7 px-2 rounded text-sm text-ink-faint hover:text-ink"
+        aria-label="Discard"
+        title="Discard"
         @click="deck.discard(cue.id)"
       >
-        Discard
+        ✕
       </button>
     </div>
   </article>
