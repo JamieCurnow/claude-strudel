@@ -69,7 +69,7 @@ const newSet = () => {
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.editMode" type="radio" value="blocks" />
           <span
-            ><span class="text-ink">Blocks</span>
+            ><span class="text-ink mr-1">Blocks</span>
             <span class="text-ink-dim"
               >Claude sends only the parts it changes. Fewer tokens, quicker.</span
             ></span
@@ -78,7 +78,7 @@ const newSet = () => {
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.editMode" type="radio" value="full" />
           <span
-            ><span class="text-ink">Full</span>
+            ><span class="text-ink mr-1">Full</span>
             <span class="text-ink-dim"
               >Claude rewrites the whole program every time. Slower, sometimes more coherent.</span
             ></span
@@ -91,7 +91,7 @@ const newSet = () => {
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.launchMode" type="radio" value="auto" />
           <span
-            ><span class="text-ink">Auto</span>
+            ><span class="text-ink mr-1">Auto</span>
             <span class="text-ink-dim"
               >Cues land when you said ("in 8 bars", "now"), otherwise on the next phrase.</span
             ></span
@@ -100,7 +100,7 @@ const newSet = () => {
         <label class="flex gap-2 text-sm cursor-pointer">
           <input v-model="settings.launchMode" type="radio" value="arm" />
           <span
-            ><span class="text-ink">Arm</span>
+            ><span class="text-ink mr-1">Arm</span>
             <span class="text-ink-dim">Every cue waits for you to hit GO.</span></span
           >
         </label>

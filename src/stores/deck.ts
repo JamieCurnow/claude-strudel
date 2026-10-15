@@ -3,7 +3,7 @@ import { computed, markRaw, ref, watch } from 'vue'
 import type { Pattern } from '@strudel/core'
 import type { ChatMessage, Visuals, When } from '#shared/director'
 import { engine, type CompileResult } from '@/engine/engine'
-import { resolveTarget } from '@/engine/timing'
+import { resolveTarget, type TargetResult } from '@/engine/timing'
 import { useClock } from './clock'
 import { useSettings, type Quantize } from './settings'
 import { useVisuals } from './visuals'
@@ -53,6 +53,10 @@ export interface Cue {
   requestCycle: number
   targetCycle?: number
   landedCycle?: number
+  /** The bar move-relative helpers (`rise`, `forBars`…) count from, set at launch. Usually the landing bar. */
+  moveStart?: number
+  /** Count helpers from this bar instead: a quick mute reuses its basis cue's start, so it doesn't restart a build. */
+  inheritStart?: number
   late?: boolean
   errors: string[]
   warnings: string[]
@@ -191,18 +195,27 @@ export const useDeck = defineStore('deck', () => {
     if (!cue.number) cue.number = nextNumber++
   }
 
-  /** Put a cue on the timeline. `when` defaults to the cue's own `when` (auto launch). */
-  const launch = async (id: string, opts: { quantize?: Quantize; when?: When } = {}) => {
+  /**
+   * Put a cue on the timeline. `when` defaults to the cue's own `when` (auto launch); `target` is a bar
+   * already planned for it (a reply's moves are planned together, see planReply).
+   */
+  const launch = async (
+    id: string,
+    opts: { quantize?: Quantize; when?: When; target?: TargetResult | null } = {}
+  ) => {
     const cue = find(id)
     if (!cue) return
     const when = opts.quantize ? { type: opts.quantize, bars: null } : (opts.when ?? cue.when)
-    const target = resolveTarget({
-      when,
-      requestCycle: cue.requestCycle,
-      frontier: clock.frontier(),
-      phraseBars: settings.phraseBars,
-      started: engine.started
-    })
+    const target =
+      opts.target !== undefined
+        ? opts.target
+        : resolveTarget({
+            when,
+            requestCycle: cue.requestCycle,
+            frontier: clock.frontier(),
+            phraseBars: settings.phraseBars,
+            started: engine.started
+          })
     if (!target) {
       cue.status = 'ready'
       number(cue)
@@ -217,18 +230,30 @@ export const useDeck = defineStore('deck', () => {
       }
     }
     number(cue)
-    Object.assign(cue, { status: 'queued', targetCycle: target.target, late: target.late })
+    const moveStart = cue.inheritStart ?? target.target
+    Object.assign(cue, { status: 'queued', targetCycle: target.target, late: target.late, moveStart })
     if (target.late)
       report(
         `#${cue.number} "${cue.title}" was late: asked for bar ${target.wanted}, lands bar ${target.target}`
       )
-    await engine.schedule({ id: cue.id, pattern, atCycle: target.target, bpm: cue.bpm ?? codeBpm })
+    await engine.schedule({ id: cue.id, pattern, atCycle: target.target, bpm: cue.bpm ?? codeBpm, moveStart })
     if (!engine.started) await engine.start()
   }
 
-  /** GO: launch the first armed cue (or the first idea if nothing is armed). */
+  /**
+   * The cue GO fires: the first armed cue of the latest reply that has any (so a reply's build fires before
+   * its drop, and what you just asked for beats something armed long ago), else the first idea.
+   */
+  const nextUp = computed(() => {
+    const latest = ready.value.at(-1)
+    if (!latest) return ideas.value.find((cue) => cue.code)
+    if (!latest.replyId) return latest
+    return ready.value.find((cue) => cue.replyId === latest.replyId)
+  })
+
+  /** GO: launch the next armed cue (or the first idea if nothing is armed). */
   const go = async () => {
-    const next = ready.value[0] ?? ideas.value[0]
+    const next = nextUp.value
     if (!next) return
     if (next.status === 'idea') return playIdea(next.id)
     await launch(next.id, { quantize: settings.goQuantize })
@@ -303,6 +328,7 @@ export const useDeck = defineStore('deck', () => {
         void engine.cancel(cue.id)
         Object.assign(cue, { status: 'ready', targetCycle: undefined })
       }
+      for (const cue of cues.value) cue.inheritStart = undefined
       return
     }
     if (event.type !== 'landed') return
@@ -333,6 +359,7 @@ export const useDeck = defineStore('deck', () => {
     generating,
     failed,
     basis,
+    nextUp,
     hooks,
     find,
     create,

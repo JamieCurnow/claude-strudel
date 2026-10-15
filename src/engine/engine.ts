@@ -231,13 +231,21 @@ export class Engine {
     }
   }
 
-  /** Put a compiled pattern on the timeline from `atCycle` (use a past cycle to replace immediately). */
-  async schedule(opts: { id: string; pattern: Pattern; atCycle: number; bpm?: number }) {
-    const { id, pattern, atCycle, bpm } = opts
+  /**
+   * Put a compiled pattern on the timeline from `atCycle` (use a past cycle to replace immediately).
+   * `moveStart` is the bar helpers like `rise()` count from (defaults to `atCycle`).
+   */
+  async schedule(opts: { id: string; pattern: Pattern; atCycle: number; bpm?: number; moveStart?: number }) {
+    const { id, pattern, atCycle, bpm, moveStart = atCycle } = opts
     this.landed.delete(id)
     this.pendingTempo = this.pendingTempo.filter((t) => t.id !== id)
     if (bpm) this.pendingTempo.push({ id, atCycle, bpm })
-    this.segments = insertSegment(this.segments, { id, from: atCycle, start: Math.max(0, atCycle), pattern })
+    this.segments = insertSegment(this.segments, {
+      id,
+      from: atCycle,
+      start: Math.max(0, moveStart),
+      pattern
+    })
     await this.install()
     this.tick()
   }
