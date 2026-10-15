@@ -1,4 +1,4 @@
-# Claude Strudel
+# StrudelClaw
 
 **Direct a live set in plain English.** Talk (or type) the vibe, and Claude writes and evolves [Strudel](https://strudel.cc) code that lands on the bar.
 
