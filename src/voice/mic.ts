@@ -1,11 +1,21 @@
 // Microphone capture as 16 kHz mono 16-bit PCM chunks (what Deepgram's linear16 encoding expects).
-// A dedicated AudioContext at 16 kHz makes the browser resample for us; an inline AudioWorklet taps frames.
+// A dedicated AudioContext at 16 kHz makes the browser resample for us; an inline AudioWorklet taps frames
+// and batches them into 40 ms chunks (Deepgram wants 20-250 ms, and 128-sample frames meant 125 socket sends/s).
 
 const WORKLET = `
 class Tap extends AudioWorkletProcessor {
+  buffer = new Float32Array(640)
+  filled = 0
   process(inputs) {
     const channel = inputs[0] && inputs[0][0]
-    if (channel) this.port.postMessage(channel.slice(0))
+    if (!channel) return true
+    for (let i = 0; i < channel.length; i++) {
+      this.buffer[this.filled++] = channel[i]
+      if (this.filled === this.buffer.length) {
+        this.port.postMessage(this.buffer.slice(0))
+        this.filled = 0
+      }
+    }
     return true
   }
 }
@@ -21,8 +31,9 @@ export interface Mic {
 }
 
 export const openMic = async (onChunk: (pcm: Int16Array<ArrayBuffer>) => void): Promise<Mic> => {
+  // No browser noise suppression: it chews up speech over loud music, and Deepgram does better on raw audio.
   const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }
+    audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true, channelCount: 1 }
   })
   const context = new AudioContext({ sampleRate: SAMPLE_RATE })
   const url = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }))

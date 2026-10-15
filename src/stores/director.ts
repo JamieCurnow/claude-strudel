@@ -18,6 +18,8 @@ const KEY = 'claude-strudel:conversation'
 interface Pending {
   direction: string
   requestCycle: number
+  /** The 'generating' cue that stands in for this direction until Claude's reply lands. */
+  cueId?: string
 }
 
 /** A partially streamed reply, parsed leniently for the UI. */
@@ -155,15 +157,9 @@ export const useDirector = defineStore('director', () => {
   const process = async (pending: Pending) => {
     const controller = new AbortController()
     current = controller
-    const placeholder = deck.create({
-      title: pending.direction,
-      origin: 'direction',
-      direction: pending.direction,
-      when: { type: 'next_phrase', bars: null },
-      requestCycle: pending.requestCycle,
-      status: 'generating',
-      partial: ''
-    })
+    const placeholder = (pending.cueId && deck.find(pending.cueId)) || placeholderFor(pending)
+    placeholder.partial = ''
+    const said = say.value
     const userMessage: ChatMessage = {
       role: 'user',
       content: buildDirectionMessage({
@@ -206,6 +202,7 @@ export const useDirector = defineStore('director', () => {
         const repairMessage: ChatMessage = { role: 'user', content: buildRepairMessage(failures) }
         const repairPlaceholder = deck.create({
           title: `Fixing: ${failures[0]!.title}`,
+          summary: pending.direction,
           origin: 'repair',
           direction: pending.direction,
           when: { type: 'next_phrase', bars: null },
@@ -245,13 +242,26 @@ export const useDirector = defineStore('director', () => {
       void startIdeas(result.output.ideas)
     } catch (err) {
       deck.remove(placeholder.id)
-      if (controller.signal.aborted) return
+      for (const cue of deck.generating) if (cue.origin === 'repair') deck.remove(cue.id)
+      if (controller.signal.aborted) return void (say.value = said)
       error.value = err instanceof DirectorError || err instanceof Error ? err.message : String(err)
       console.error({ err })
     } finally {
       if (current === controller) current = undefined
     }
   }
+
+  /** A queued direction shows as a 'generating' cue straight away (partial stays unset until it's sent). */
+  const placeholderFor = (pending: Pending) =>
+    deck.create({
+      title: pending.direction,
+      summary: pending.direction,
+      origin: 'direction',
+      direction: pending.direction,
+      when: { type: 'next_phrase', bars: null },
+      requestCycle: pending.requestCycle,
+      status: 'generating'
+    })
 
   const pump = async () => {
     if (busy.value) return
@@ -375,7 +385,7 @@ export const useDirector = defineStore('director', () => {
       return idea ? deck.playIdea(idea.id) : flash('No idea there yet')
     }
     if (command.type === 'cancel') {
-      if (current) return current.abort()
+      if (current) return cancelLatest()
       const last = deck.queued.at(-1)
       return last ? deck.cancel(last.id) : undefined
     }
@@ -396,12 +406,30 @@ export const useDirector = defineStore('director', () => {
     } else if (command) return runCommand(command)
     stopIdeas()
     error.value = ''
-    queue.value.push({ direction, requestCycle: opts.requestCycle ?? engine.position() })
+    const pending: Pending = { direction, requestCycle: opts.requestCycle ?? engine.position() }
+    pending.cueId = placeholderFor(pending).id
+    queue.value.push(pending)
     await pump()
+  }
+
+  /** Cancel one direction by its 'generating' cue: drop it from the queue, or abort it if Claude is on it. */
+  const cancel = (cueId: string) => {
+    const waiting = queue.value.find((pending) => pending.cueId === cueId)
+    if (!waiting) return current?.abort()
+    queue.value = queue.value.filter((pending) => pending !== waiting)
+    deck.remove(cueId)
+  }
+
+  /** Cancel the most recent direction (queued or in flight). */
+  const cancelLatest = () => {
+    const last = queue.value.at(-1)
+    if (last?.cueId) return cancel(last.cueId)
+    current?.abort()
   }
 
   /** Abort whatever Claude is doing (and drop queued directions). */
   const abort = () => {
+    for (const pending of queue.value) if (pending.cueId) deck.remove(pending.cueId)
     queue.value = []
     current?.abort()
     stopIdeas()
@@ -418,5 +446,18 @@ export const useDirector = defineStore('director', () => {
     error.value = ''
   }
 
-  return { messages, queue, busy, say, notice, error, direct, abort, newSet, runCommand }
+  return {
+    messages,
+    queue,
+    busy,
+    say,
+    notice,
+    error,
+    direct,
+    cancel,
+    cancelLatest,
+    abort,
+    newSet,
+    runCommand
+  }
 })
